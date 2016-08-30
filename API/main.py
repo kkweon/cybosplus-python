@@ -1,7 +1,7 @@
 # -*- encoding: utf-8 -*-
+import sys
 import pandas as pd
 from win32com.client import Dispatch
-import sys
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
@@ -275,45 +275,26 @@ class CybosPlus(object):
         CybosPlus.StockChart.SetInputValue(0, stockcode)
         CybosPlus.StockChart.SetInputValue(1, ord('2'))  # 1: by date, 2: by number
         CybosPlus.StockChart.SetInputValue(4, 10)  # # of Data to Request
-        CybosPlus.StockChart.SetInputValue(5, (
-            0, 2, 3, 4, 5, 8))  # Request Data, 0: date, 1, hhmm, 2: start, 3: max, 4:min, 5: close, 8: volume
+        CybosPlus.StockChart.SetInputValue(5, (0, 5, 8, 12, 13, 25))
+        # Request Data, 0: date, 1, hhmm, 2: start, 3: max, 4:min, 5: close, 8: volume
+        # 12: 상 장 주 식 수, 13: 시가 총액, 25: 주 식 회 전 율
         CybosPlus.StockChart.SetInputValue(6, ord('D'))  # 'D': Daily, W, M, m(inutes), T(ick)
         CybosPlus.StockChart.SetInputValue(9, ord('1'))  # Adj Price
         CybosPlus.StockChart.BlockRequest()
-        num_data = CybosPlus.StockChart.GetHeaderValue(3)
+
         num_fields = CybosPlus.StockChart.GetHeaderValue(1)
+        field_names = CybosPlus.StockChart.GetHeaderValue(2)
+        num_data = CybosPlus.StockChart.GetHeaderValue(3)
+        current_status = chr(CybosPlus.StockChart.GetHeaderValue(17))
 
         result = dict()
         for i in xrange(num_data):
-            for field in xrange(num_fields):
+            temp = dict()
+            for field_name, field in zip(field_names, xrange(num_fields)):
                 val = CybosPlus.StockChart.GetDataValue(field, i)
-                if field == 0:
-                    if 'Date' not in result.keys():
-                        result['Date'] = [val]
-                    else:
-                        result['Date'].append(val)
-                elif field == 1:
-                    if 'Start' not in result.keys():
-                        result['Start'] = [val]
-                    else:
-                        result["Start"].append(val)
-                elif field == 2:
-                    if 'Max' not in result.keys():
-                        result['Max'] = [val]
-                    else:
-                        result['Max'].append(val)
-                elif field == 3:
-                    if 'Min' not in result.keys():
-                        result['Min'] = [val]
-                    else:
-                        result['Min'].append(val)
-                elif field == 4:
-                    if 'Close' not in result.keys():
-                        result['Close'] = [val]
-                    else:
-                        result['Close'].append(val)
-
-        result = pd.DataFrame(result, columns=['Date', 'Start', 'Min', 'Max', 'Close']).sort_values(by=['Date'])
+                temp[field_name] = val
+            result[num_data - i] = temp
+        result['current_status'] = current_status
         return result
 
     @staticmethod
@@ -434,15 +415,6 @@ class CybosPlus(object):
 
         return result
 
-
-def pretty(d, indent=0):
-    for key, value in d.iteritems():
-        print '\t' * indent + str(key) + ":"
-        if isinstance(value, dict):
-            pretty(value, indent + 1)
-        else:
-            print '\t' * (indent + 1) + str(value)
-
 if __name__ == "__main__":
     CybosPlus.initialize()
     print "Connected: {}".format(CybosPlus.is_connected())
@@ -454,13 +426,9 @@ if __name__ == "__main__":
     STOCK_NAME = "NAVER"
     STOCK_CODE = CybosPlus.get_stock_code(STOCK_NAME)
 
+    print CybosPlus.get_order_status(AccNo, STOCK_CODE)
     # Complex View Test
     # portfolio = CybosPlus.get_account_portfolio(AccNo)
-    # names_test = []
-    # for stock in portfolio:
-    #     t = portfolio[stock]['stock_code']
-    #     names_test.append(t)
-    # print names_test
-    # result = CybosPlus.get_many_current_complex_info(names_test)
+    # print(portfolio)
     # for i in result:
     #     pretty(i)
