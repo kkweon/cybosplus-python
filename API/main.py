@@ -16,6 +16,8 @@ class CybosPlus(object):
 
     StockChart = Dispatch("CpSysDib.StockChart")
 
+    CpCodeMgr = Dispatch("CpUtil.CpCodeMgr")
+
     @staticmethod
     def is_connected():
         """ Checks the Connection
@@ -244,6 +246,21 @@ class CybosPlus(object):
             result.append((order_no, stock_code, stock_name, info, amount))
         return result
 
+    @staticmethod
+    def get_market_start_time():
+        '''Returns market start time
+
+        :return int:  9 - 09:00 , 15:00 - 03:00pm
+        '''
+        return CybosPlus.CpCodeMgr.GetMarketStartTime()
+
+    @staticmethod
+    def get_market_close_time():
+        '''Returns market close time
+
+        :return int:
+        '''
+        return CybosPlus.CpCodeMgr.GetMarketEndTime()
 
 if __name__ == "__main__":
     import time
@@ -251,8 +268,8 @@ if __name__ == "__main__":
     print "Connected: {}".format(CybosPlus.is_connected())
     tic = time.time()
     print "Time elapsed: {:.6f}".format(tic-toc)
-    # print CybosPlus.get_stock_name('035420')
-    # print CybosPlus.get_count()
+    print CybosPlus.get_stock_name('035420')
+    print CybosPlus.get_count()
     # print CybosPlus.get_stock_code("NAVER")
     print CybosPlus.trade_init()
     AccNo = CybosPlus.get_account_number()[0]
@@ -272,5 +289,5 @@ STOCK CODE: {}
     # print CybosPlus.buy_order(AccNo, STOCK_CODE, 10, 850000)
     # print CybosPlus.sell_order(AccNo, STOCK_CODE, 10)
     # print CybosPlus.cancel_order(AccNo, )
-    print CybosPlus.get_order_status(AccNo)
+    # print CybosPlus.get_order_status(AccNo)
 
