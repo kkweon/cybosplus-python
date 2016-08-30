@@ -6,11 +6,9 @@ from flask import make_response
 from flask.templating import render_template
 from flask_restful import Api, Resource
 from API.main import CybosPlus
-from doc.app import doc_bp
 import json
 
 app = Flask(__name__)
-app.register_blueprint(doc_bp, url_prefix='/doc')
 api = Api(app)
 
 CybosPlus.initialize()
