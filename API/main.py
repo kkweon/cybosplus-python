@@ -7,16 +7,19 @@ class CybosPlus(object):
 
     CpCybos = Dispatch('CpUtil.CpCybos')
     CpStockCode = Dispatch('CpUtil.CpStockCode')
+    CpCodeMgr = Dispatch("CpUtil.CpCodeMgr")
 
     CpTdUtil = Dispatch("CpTrade.CpTdUtil")
-    CpTradeAccBal = Dispatch("CpTrade.CpTd6033")
+    CpTradeAccPorfolio = Dispatch("CpTrade.CpTd6033")
+    CpTradeAccBalanceBuy = Dispatch("CpTrade.CpTdNew5331A")
+    CpTradeAccBalanceSell = Dispatch("CpTrade.CpTdNew5331B")
+
     CpTradeCashOrder = Dispatch("CpTrade.CpTd0311")
     CpTradeCancelOrder = Dispatch("CpTrade.CpTd0314")
     CpTradeOrderStatus = Dispatch("CpTrade.CpTd5341")
 
     StockChart = Dispatch("CpSysDib.StockChart")
 
-    CpCodeMgr = Dispatch("CpUtil.CpCodeMgr")
 
     @staticmethod
     def is_connected():
@@ -101,30 +104,43 @@ class CybosPlus(object):
         return CybosPlus.CpTdUtil.GoodsList(AccountNumber, Filter)
 
     @staticmethod
-    def get_account_balance(AccountNumber):
-        '''Returns account balance
+    def get_account_portfolio(AccountNumber):
+        '''Returns account portfolio
 
         :param str AccountNumber: Account Number
         :return int: Account Balance
         '''
         request_no = 50 # Request no
-        CybosPlus.CpTradeAccBal.SetInputValue(0, AccountNumber)
-        CybosPlus.CpTradeAccBal.SetInputValue(2, request_no)
-        CybosPlus.CpTradeAccBal.BlockRequest()
+        CybosPlus.CpTradeAccPorfolio.SetInputValue(0, AccountNumber)
+        CybosPlus.CpTradeAccPorfolio.SetInputValue(2, request_no)
+        CybosPlus.CpTradeAccPorfolio.BlockRequest()
 
-        no_data = CybosPlus.CpTradeAccBal.GetHeaderValue(7)
+        no_data = CybosPlus.CpTradeAccPorfolio.GetHeaderValue(7)
         if no_data == 0:
             return -1
         else:
             result = []
             for i in range(no_data):
-                stock_name = CybosPlus.CpTradeAccBal.GetDataValue(0, i) #stock name
-                pay_amount = CybosPlus.CpTradeAccBal.GetDataValue(3, i) #gyeoljaejangosooryang
-                trade_amount = CybosPlus.CpTradeAccBal.GetDataValue(7, i) #chaegeoljangosooryang
-                eval_price = CybosPlus.CpTradeAccBal.GetDataValue(9, i) #evaluation price
-                result.append((stock_name, pay_amount, trade_amount, eval_price))
+                stock_name = CybosPlus.CpTradeAccPorfolio.GetDataValue(0, i) #stock name
+                pay_amount = CybosPlus.CpTradeAccPorfolio.GetDataValue(3, i) #gyeoljaejangosooryang
+                trade_amount = CybosPlus.CpTradeAccPorfolio.GetDataValue(7, i) #chaegeoljangosooryang
+                eval_price = CybosPlus.CpTradeAccPorfolio.GetDataValue(9, i) #evaluation price
+                ROI = CybosPlus.CpTradeAccPorfolio.GetDataValue(11, i)
+                sell_available = CybosPlus.CpTradeAccPorfolio.GetDataValue(15, i)
+                result.append((stock_name, pay_amount, trade_amount, eval_price, ROI, sell_available))
             return result
 
+    @staticmethod
+    def get_account_balance(AccountNumber):
+        """Get Account Balance
+
+        :param AccountNumber:
+        :return:
+        """
+        object = CybosPlus.CpTradeAccBalanceBuy
+        object.SetInputValue(0, AccountNumber)
+        object.BlockRequest()
+        return object.GetHeaderValue(45)
 
     @staticmethod
     def get_10_latest_quotes(stockcode):
@@ -273,21 +289,27 @@ if __name__ == "__main__":
     # print CybosPlus.get_stock_code("NAVER")
     print CybosPlus.trade_init()
     AccNo = CybosPlus.get_account_number()[0]
-    print CybosPlus.get_account_balance(AccNo)
+    print CybosPlus.get_account_portfolio(AccNo)
 
     STOCK_NAME = "NAVER"
     STOCK_CODE = CybosPlus.get_stock_code(STOCK_NAME)
-    toc = time.time()
-    print '''
-STOCK NAME: {}
-STOCK CODE: {}
-    '''.format(STOCK_NAME, STOCK_CODE)
-    print CybosPlus.get_10_latest_quotes(STOCK_CODE)
-    tic = time.time()
-
-    print "Time elapsed: {:.6f}".format(tic-toc)
+#     toc = time.time()
+#     print '''
+# STOCK NAME: {}
+# STOCK CODE: {}
+#     '''.format(STOCK_NAME, STOCK_CODE)
+#     print CybosPlus.get_10_latest_quotes(STOCK_CODE)
+#     tic = time.time()
+    # print "Time elapsed: {:.6f}".format(tic-toc)
     # print CybosPlus.buy_order(AccNo, STOCK_CODE, 10, 850000)
     # print CybosPlus.sell_order(AccNo, STOCK_CODE, 10)
     # print CybosPlus.cancel_order(AccNo, )
-    # print CybosPlus.get_order_status(AccNo)
+    print "Order Status"
+    orders = CybosPlus.get_order_status(AccNo)
+    for order in orders:
+        print(order)
+
+    print "Account Balance: {}".format(CybosPlus.get_account_balance(AccNo))
+
+    # print CybosPlus.CpCybos.OnDisConnect
 
