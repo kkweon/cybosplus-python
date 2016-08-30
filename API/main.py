@@ -1,24 +1,37 @@
 #-*- encoding: utf-8 -*-
-from pandas import DataFrame
+import pandas as pd
 from win32com.client import Dispatch
 
 
 class CybosPlus(object):
+    CpCybos = None
+    CpStockCode = None
+    CpCodeMgr = None
+    CpTdUtil = None
+    CpTradeAccPortfolio = None
+    CpTradeAccBalanceBuy = None
+    CpTradeAccBalanceSell = None
+    CpTradeCashOrder = None
+    CpTradeCancelOrder = None
+    CpTradeOrderStatus = None
+    StockChart = None
 
-    CpCybos = Dispatch('CpUtil.CpCybos')
-    CpStockCode = Dispatch('CpUtil.CpStockCode')
-    CpCodeMgr = Dispatch("CpUtil.CpCodeMgr")
+    @staticmethod
+    def initialize():
+        CybosPlus.CpCybos = Dispatch('CpUtil.CpCybos')
+        CybosPlus.CpStockCode = Dispatch('CpUtil.CpStockCode')
+        CybosPlus.CpCodeMgr = Dispatch("CpUtil.CpCodeMgr")
 
-    CpTdUtil = Dispatch("CpTrade.CpTdUtil")
-    CpTradeAccPorfolio = Dispatch("CpTrade.CpTd6033")
-    CpTradeAccBalanceBuy = Dispatch("CpTrade.CpTdNew5331A")
-    CpTradeAccBalanceSell = Dispatch("CpTrade.CpTdNew5331B")
+        CybosPlus.CpTdUtil = Dispatch("CpTrade.CpTdUtil")
+        CybosPlus.CpTradeAccPorfolio = Dispatch("CpTrade.CpTd6033")
+        CybosPlus.CpTradeAccBalanceBuy = Dispatch("CpTrade.CpTdNew5331A")
+        CybosPlus.CpTradeAccBalanceSell = Dispatch("CpTrade.CpTdNew5331B")
 
-    CpTradeCashOrder = Dispatch("CpTrade.CpTd0311")
-    CpTradeCancelOrder = Dispatch("CpTrade.CpTd0314")
-    CpTradeOrderStatus = Dispatch("CpTrade.CpTd5341")
+        CybosPlus.CpTradeCashOrder = Dispatch("CpTrade.CpTd0311")
+        CybosPlus.CpTradeCancelOrder = Dispatch("CpTrade.CpTd0314")
+        CybosPlus.CpTradeOrderStatus = Dispatch("CpTrade.CpTd5341")
 
-    StockChart = Dispatch("CpSysDib.StockChart")
+        CybosPlus.StockChart = Dispatch("CpSysDib.StockChart")
 
 
     @staticmethod
@@ -120,7 +133,7 @@ class CybosPlus(object):
             return -1
         else:
             result = []
-            for i in range(no_data):
+            for i in xrange(no_data):
                 stock_name = CybosPlus.CpTradeAccPorfolio.GetDataValue(0, i) #stock name
                 pay_amount = CybosPlus.CpTradeAccPorfolio.GetDataValue(3, i) #gyeoljaejangosooryang
                 trade_amount = CybosPlus.CpTradeAccPorfolio.GetDataValue(7, i) #chaegeoljangosooryang
@@ -140,7 +153,7 @@ class CybosPlus(object):
         object = CybosPlus.CpTradeAccBalanceBuy
         object.SetInputValue(0, AccountNumber)
         object.BlockRequest()
-        return object.GetHeaderValue(45)
+        return object.GetHeaderValue(10)
 
     @staticmethod
     def get_10_latest_quotes(stockcode):
@@ -160,8 +173,8 @@ class CybosPlus(object):
         num_fields = CybosPlus.StockChart.GetHeaderValue(1)
 
         result = dict()
-        for i in range(num_data):
-            for field in range(num_fields):
+        for i in xrange(num_data):
+            for field in xrange(num_fields):
                 val = CybosPlus.StockChart.GetDataValue(field, i)
                 if field == 0:
                     if 'Date' not in result.keys():
@@ -189,7 +202,7 @@ class CybosPlus(object):
                     else:
                         result['Close'].append(val)
 
-        result = DataFrame(result, columns=['Date','Start','Min','Max','Close']).sort_values(by=['Date'])
+        result = pd.DataFrame(result, columns=['Date','Start','Min','Max','Close']).sort_values(by=['Date'])
         return result
 
     @staticmethod
@@ -253,13 +266,20 @@ class CybosPlus(object):
         num_data = CybosPlus.CpTradeOrderStatus.GetHeaderValue(6)
         result = []
 
-        for i in range(num_data):
+        for i in xrange(num_data):
             order_no = CybosPlus.CpTradeOrderStatus.GetDataValue(1, i) #order#
             stock_code = CybosPlus.CpTradeOrderStatus.GetDataValue(3, i)
             stock_name = CybosPlus.CpTradeOrderStatus.GetDataValue(4, i)
             info = CybosPlus.CpTradeOrderStatus.GetDataValue(5, i)
+            order_amount = CybosPlus.CpTradeOrderStatus.GetDataValue(7, i)
+
             amount = CybosPlus.CpTradeOrderStatus.GetDataValue(10, i) # Amount Traded
-            result.append((order_no, stock_code, stock_name, info, amount))
+            buy_or_sell = CybosPlus.CpTradeOrderStatus.GetDataValue(35, i) #1: sell 2: buy
+            if buy_or_sell == 1:
+                buy_or_sell = "Sell"
+            else:
+                buy_or_sell = "Buy"
+            result.append((order_no, stock_code, stock_name, info, order_amount, amount, buy_or_sell))
         return result
 
     @staticmethod
@@ -279,13 +299,10 @@ class CybosPlus(object):
         return CybosPlus.CpCodeMgr.GetMarketEndTime()
 
 if __name__ == "__main__":
-    import time
-    toc = time.time()
+    CybosPlus.initialize()
     print "Connected: {}".format(CybosPlus.is_connected())
-    tic = time.time()
-    print "Time elapsed: {:.6f}".format(tic-toc)
     print CybosPlus.get_stock_name('035420')
-    print CybosPlus.get_count()
+    print u"Stock Trade Available: {}".format(CybosPlus.get_count())
     # print CybosPlus.get_stock_code("NAVER")
     print CybosPlus.trade_init()
     AccNo = CybosPlus.get_account_number()[0]
@@ -304,12 +321,17 @@ if __name__ == "__main__":
     # print CybosPlus.buy_order(AccNo, STOCK_CODE, 10, 850000)
     # print CybosPlus.sell_order(AccNo, STOCK_CODE, 10)
     # print CybosPlus.cancel_order(AccNo, )
+    print "Portfolio"
+    my_portfolio = CybosPlus.get_account_portfolio(AccNo)
+    df = pd.DataFrame(my_portfolio)
+    print(df)
+
     print "Order Status"
     orders = CybosPlus.get_order_status(AccNo)
-    for order in orders:
-        print(order)
+    df = pd.DataFrame(orders)
+    print(df)
 
-    print "Account Balance: {}".format(CybosPlus.get_account_balance(AccNo))
+    print "Account Balance: KRW {:,}".format(CybosPlus.get_account_balance(AccNo))
 
     # print CybosPlus.CpCybos.OnDisConnect
 
