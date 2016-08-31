@@ -21,6 +21,9 @@ class BasicInfo(Resource):
         data['connected'] = CybosPlus.is_connected()
         data['order_limit'] = CybosPlus.get_limit_remain_count(0)
         data['view_limit'] = CybosPlus.get_limit_remain_count(1)
+        data['refresh_time'] = CybosPlus.get_limit_remain_time()
+        data['market_open'] = CybosPlus.get_market_start_time()
+        data['market_close'] = CybosPlus.get_market_close_time()
         data = json.dumps(data, ensure_ascii=False, indent=4)
         return make_response(data)
 
@@ -51,9 +54,9 @@ def home():
     return render_template('index.html')
 
 
-api.add_resource(Portfolio, "/portfolio")
+api.add_resource(Portfolio, "/portfolio/")
 api.add_resource(Stock, "/stock/<string:stock_code>")
-api.add_resource(BasicInfo, "/info")
+api.add_resource(BasicInfo, "/info/")
 
 if __name__ == "__main__":
     reload(sys)

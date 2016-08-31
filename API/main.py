@@ -295,6 +295,7 @@ class CybosPlus(object):
                 temp[field_name] = val
             result[num_data - i] = temp
         result['current_status'] = current_status
+        result['stock_name'] = CybosPlus.get_stock_name(stockcode)
         return result
 
     @staticmethod
