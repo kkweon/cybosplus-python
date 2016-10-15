@@ -1,18 +1,17 @@
 # -*- encoding: utf-8 -*-
-import sys
+import json
 
 from flask import Flask
 from flask import make_response
+from flask import request
 from flask.templating import render_template
 from flask_restful import Api, Resource
+
 from API.main import CybosPlus
-import json
 
 app = Flask(__name__)
 api = Api(app)
 
-CybosPlus.initialize()
-AccNo = CybosPlus.get_account_number()[0]
 
 
 class BasicInfo(Resource):
@@ -29,8 +28,8 @@ class BasicInfo(Resource):
 
 class Portfolio(Resource):
     def get(self):
-        stocks = CybosPlus.get_account_portfolio(AccNo)
-        acc_bal = CybosPlus.get_account_balance(AccNo)
+        stocks = CybosPlus.get_account_portfolio(account_number)
+        acc_bal = CybosPlus.get_account_balance(account_number)
         stocks["account_balance"] = acc_bal
 
         return make_response(json.dumps(stocks, ensure_ascii=False, indent=4))
@@ -42,23 +41,25 @@ class Stock(Resource):
         data = json.dumps(data, ensure_ascii=False, indent=4)
         return make_response(data)
 
-    def post(self):
-        pass
+    def post(self, stock_code, buy_or_sell):
+        amount = request.form['amount']
+        if buy_or_sell == "buy":
+            return make_response("{}를 {}개 구매함".format(stock_code, amount))
+        elif buy_or_sell == "sell":
+            return make_response("{}를 {}개 판매함".format(stock_code, amount))
 
-    def delete(self):
-        pass
+
 
 
 @app.route('/')
 def home():
     return render_template('index.html')
 
-
 api.add_resource(Portfolio, "/portfolio/")
-api.add_resource(Stock, "/stock/<string:stock_code>")
+api.add_resource(Stock, "/stock/<string:stock_code>", "/stock/<string:stock_code>/<string:buy_or_sell>")
 api.add_resource(BasicInfo, "/info/")
 
 if __name__ == "__main__":
-    reload(sys)
-    sys.setdefaultencoding('utf-8')
+    CybosPlus.initialize(password="0302")
+    account_number = CybosPlus.get_account_number()[0]
     app.run(host="0.0.0.0", port=80)

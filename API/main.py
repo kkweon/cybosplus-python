@@ -1,10 +1,30 @@
 # -*- encoding: utf-8 -*-
-import sys
-import pandas as pd
-from win32com.client import Dispatch
+import multiprocessing
+import time
+from pprint import pprint
 
-reload(sys)
-sys.setdefaultencoding('utf-8')
+import pywinauto
+from win32com.client import Dispatch, DispatchWithEvents
+
+
+def auto_enter_password(pwd, delay):
+    app = pywinauto.Application()
+    time.sleep(delay)
+    try:
+        app.connect(title_re=u"CybosPlus 주문확인 설정")
+        dlg = app.windows_()
+        # app.dlg.PrintControlIdentifiers()
+        app.dlg.Edit.TypeKeys(pwd)
+        app.dlg.Button.Click()
+
+
+    except:
+        pass
+
+
+class EventDisconnectHandler:
+    def OnDisConnect(self):
+        print "Disconnecting.."
 
 
 class CybosPlus(object):
@@ -22,8 +42,8 @@ class CybosPlus(object):
     MarketEye = None
 
     @staticmethod
-    def initialize():
-        CybosPlus.CpCybos = Dispatch('CpUtil.CpCybos')
+    def initialize(password=None, delay=1):
+        CybosPlus.CpCybos = DispatchWithEvents('CpUtil.CpCybos', EventDisconnectHandler)
         CybosPlus.CpStockCode = Dispatch('CpUtil.CpStockCode')
         CybosPlus.CpCodeMgr = Dispatch("CpUtil.CpCodeMgr")
         CybosPlus.CpTdUtil = Dispatch("CpTrade.CpTdUtil")
@@ -35,7 +55,7 @@ class CybosPlus(object):
         CybosPlus.CpTradeOrderStatus = Dispatch("CpTrade.CpTd5341")
         CybosPlus.StockChart = Dispatch("CpSysDib.StockChart")
         CybosPlus.MarketEye = Dispatch("CpSysDib.MarketEye")
-        CybosPlus.trade_init()
+        CybosPlus.trade_init(password, delay)
 
     @staticmethod
     def is_connected():
@@ -79,7 +99,7 @@ class CybosPlus(object):
         return CybosPlus.CpStockCode.GetCount()
 
     @staticmethod
-    def trade_init():
+    def trade_init(password=None, delay=1):
         ''' Trade Init Function.
 
         .. note::
@@ -95,6 +115,13 @@ class CybosPlus(object):
             3: cancelled
 
         '''
+        if password is not None:
+            p = multiprocessing.Process(target=auto_enter_password, args=(password, delay))
+            p.start()
+            result = CybosPlus.CpTdUtil.TradeInit()
+            p.join()
+            return result
+
         return CybosPlus.CpTdUtil.TradeInit()
 
     @staticmethod
@@ -131,22 +158,42 @@ class CybosPlus(object):
         CybosPlus.CpTradeAccPortfolio.SetInputValue(2, request_no)
         CybosPlus.CpTradeAccPortfolio.BlockRequest()
 
+        pay_balance_amount = CybosPlus.CpTradeAccPortfolio.GetHeaderValue(1)
+        sign_balance_amount = CybosPlus.CpTradeAccPortfolio.GetHeaderValue(2)
+        evaluation_price = CybosPlus.CpTradeAccPortfolio.GetHeaderValue(3)
+        evaluation_diff = CybosPlus.CpTradeAccPortfolio.GetHeaderValue(4)
         no_data = CybosPlus.CpTradeAccPortfolio.GetHeaderValue(7)
+        total_return = CybosPlus.CpTradeAccPortfolio.GetHeaderValue(8)
+        d2_expect_evaluation = CybosPlus.CpTradeAccPortfolio.GetHeaderValue(9)
+
+        result = {
+            "pay_balance_amount": pay_balance_amount,
+            "sign_balance_amount": sign_balance_amount,
+            "evaluation_price": evaluation_price,
+            "evaluation_diff": evaluation_diff,
+            "count": no_data,
+            "total_return": total_return,
+            "d2_expect_evaluation": d2_expect_evaluation,
+            "portfolio": [],
+        }
         if no_data == 0:
             return -1
         else:
-            result = {}
             for i in xrange(no_data):
                 stock_name = CybosPlus.CpTradeAccPortfolio.GetDataValue(0, i)  # stock name
                 # pay_amount = CybosPlus.CpTradeAccPorfolio.GetDataValue(3, i) #gyeoljaejangosooryang
                 trade_amount = CybosPlus.CpTradeAccPortfolio.GetDataValue(7, i)  # chaegeoljangosooryang
                 eval_price = CybosPlus.CpTradeAccPortfolio.GetDataValue(9, i)  # evaluation price
+                eval_return = CybosPlus.CpTradeAccPortfolio.GetDataValue(10, i)  # evaluation return
                 ROI = CybosPlus.CpTradeAccPortfolio.GetDataValue(11, i)
                 stock_code = CybosPlus.CpTradeAccPortfolio.GetDataValue(12, i)  # stock_code
                 sell_available = CybosPlus.CpTradeAccPortfolio.GetDataValue(15, i)
+                purchase_price = CybosPlus.CpTradeAccPortfolio.GetDataValue(17, i)  # purchase price
                 stock = {"stock_name": stock_name, "stock_code": stock_code, "trade_shares": trade_amount,
-                         "evaluation": eval_price, "return": ROI, "sell_available": sell_available}
-                result['stock_' + str(i)] = stock
+                         "purchase_price": purchase_price,
+                         "evaluation": eval_price, "return": ROI, "sell_available": sell_available,
+                         "eval_return": eval_return}
+                result['portfolio'].append(stock)
             return result
 
     @staticmethod
@@ -276,7 +323,7 @@ class CybosPlus(object):
         CybosPlus.StockChart.SetInputValue(1, ord('2'))  # 1: by date, 2: by number
         CybosPlus.StockChart.SetInputValue(4, 10)  # # of Data to Request
         CybosPlus.StockChart.SetInputValue(5, (0, 5, 8, 12, 13, 25))
-        # Request Data, 0: date, 1, hhmm, 2: start, 3: max, 4:min, 5: close, 8: volume
+        # Request Data, 0: date, 1, hhmm, 2: open, 3: high, 4:low, 5: close, 8: volume
         # 12: 상 장 주 식 수, 13: 시가 총액, 25: 주 식 회 전 율
         CybosPlus.StockChart.SetInputValue(6, ord('D'))  # 'D': Daily, W, M, m(inutes), T(ick)
         CybosPlus.StockChart.SetInputValue(9, ord('1'))  # Adj Price
@@ -288,12 +335,14 @@ class CybosPlus(object):
         current_status = chr(CybosPlus.StockChart.GetHeaderValue(17))
 
         result = dict()
+        data = []
         for i in xrange(num_data):
             temp = dict()
             for field_name, field in zip(field_names, xrange(num_fields)):
                 val = CybosPlus.StockChart.GetDataValue(field, i)
                 temp[field_name] = val
-            result[num_data - i] = temp
+            data.append(temp)
+        result['data'] = data
         result['current_status'] = current_status
         result['stock_name'] = CybosPlus.get_stock_name(stockcode)
         return result
@@ -416,20 +465,16 @@ class CybosPlus(object):
 
         return result
 
+
 if __name__ == "__main__":
-    CybosPlus.initialize()
+    CybosPlus.initialize(password="0302", delay=0)
     print "Connected: {}".format(CybosPlus.is_connected())
     print "Limit Request remain: {}".format(CybosPlus.get_limit_remain_time())
     print "Request Order remain: {}".format(CybosPlus.get_limit_remain_count(0))
     print "Request Quote remain: {}".format(CybosPlus.get_limit_remain_count(1))
     print "-------------------------"
-    AccNo = CybosPlus.get_account_number()[0]
-    STOCK_NAME = "NAVER"
-    STOCK_CODE = CybosPlus.get_stock_code(STOCK_NAME)
-
-    print CybosPlus.get_order_status(AccNo, STOCK_CODE)
-    # Complex View Test
-    # portfolio = CybosPlus.get_account_portfolio(AccNo)
-    # print(portfolio)
-    # for i in result:
-    #     pretty(i)
+    account_no = CybosPlus.get_account_number()[0]
+    portfolio = CybosPlus.get_account_portfolio(account_no)
+    account_balance = CybosPlus.get_account_balance(account_no)
+    print "account balance: {}".format(account_balance)
+    pprint(portfolio)
