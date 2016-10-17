@@ -5,13 +5,14 @@ from flask import Flask
 from flask import make_response
 from flask import request
 from flask.templating import render_template
+from flask_cors import CORS
 from flask_restful import Api, Resource
 
 from API.main import CybosPlus
 
 app = Flask(__name__)
 api = Api(app)
-
+CORS(app)
 
 
 class BasicInfo(Resource):
@@ -27,10 +28,12 @@ class BasicInfo(Resource):
         return make_response(data)
 
 class Portfolio(Resource):
+
     def get(self):
         stocks = CybosPlus.get_account_portfolio(account_number)
         acc_bal = CybosPlus.get_account_balance(account_number)
         stocks["account_balance"] = acc_bal
+        stocks["account_number"] = account_number
 
         return make_response(json.dumps(stocks, ensure_ascii=False, indent=4))
 
