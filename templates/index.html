@@ -2,13 +2,29 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <title>Cybos API Controller</title>
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
 </head>
 <body>
-<ul>
-    <li>/portfolio: 포트 폴리오</li>
-    <li>/stock/&lt;stock_code&gt;: 아 왜 한 글 안 되</li>
-    <li>/info : 현재 정보</li>
-</ul>
+<nav class="navbar navbar-default">
+    <div class="container-fluid">
+        <div class="navbar-header">
+            <a class="navbar-brand" href="#">HOME</a>
+        </div>
+        <ul class="nav navbar-nav">
+            <li><a href="#">Home</a></li>
+            <li><a href="{{ url_for('portfolio.portfolio') }}">/portfolio: 포트 폴리오</a></li>
+            <li><a href="{{ url_for('stocks.individualstock', stock_code='A002250') }}">/stock/stock_code: 주식 예제</a>
+            </li>
+            <li><a href="{{ url_for('info.infoview') }}">/info : 현재 정보</a></li>
+        </ul>
+    </div>
+</nav>
+
+<!-- jQuery library -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+<!-- Latest compiled JavaScript -->
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
 </body>
 </html>

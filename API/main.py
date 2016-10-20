@@ -1,10 +1,11 @@
 # -*- encoding: utf-8 -*-
 import multiprocessing
 import time
-from pprint import pprint
 
 import pywinauto
 from win32com.client import Dispatch, DispatchWithEvents
+
+from enum_list import order_status_dict
 
 
 def auto_enter_password(pwd, delay):
@@ -51,6 +52,7 @@ class CybosPlus(object):
         CybosPlus.CpTradeAccBalanceBuy = Dispatch("CpTrade.CpTdNew5331A")
         CybosPlus.CpTradeAccBalanceSell = Dispatch("CpTrade.CpTdNew5331B")
         CybosPlus.CpTradeCashOrder = Dispatch("CpTrade.CpTd0311")
+        CybosPlus.CpTradeChangePrice = Dispatch("CpTrade.CpTd0313")
         CybosPlus.CpTradeCancelOrder = Dispatch("CpTrade.CpTd0314")
         CybosPlus.CpTradeOrderStatus = Dispatch("CpTrade.CpTd5341")
         CybosPlus.StockChart = Dispatch("CpSysDib.StockChart")
@@ -106,6 +108,8 @@ class CybosPlus(object):
 
             This function should always be called before doing any trading
 
+        :param str password: password
+        :param int delay: delay
         :return int:
 
             0: success
@@ -148,7 +152,7 @@ class CybosPlus(object):
 
     @staticmethod
     def get_account_portfolio(AccountNumber):
-        '''Returns account portfolio
+        '''Returns account portfolios
 
         :param str AccountNumber: Account Number
         :return int: Account Balance
@@ -174,7 +178,7 @@ class CybosPlus(object):
             "count": no_data,
             "total_return": total_return,
             "d2_expect_evaluation": d2_expect_evaluation,
-            "portfolio": [],
+            "portfolios": [],
         }
         if no_data == 0:
             return -1
@@ -193,7 +197,7 @@ class CybosPlus(object):
                          "purchase_price": purchase_price,
                          "evaluation": eval_price, "return": ROI, "sell_available": sell_available,
                          "eval_return": eval_return}
-                result['portfolio'].append(stock)
+                result['portfolios'].append(stock)
             return result
 
     @staticmethod
@@ -219,7 +223,7 @@ class CybosPlus(object):
         return CybosPlus.CpCybos.GetLimitRemainCount(limit_type)
 
     @staticmethod
-    def get_quote_on_date(stock_code, begin_date, end_date=0):
+    def get_quote_by_date(stock_code, begin_date, end_date=0):
         """ Get Stock Quote on the given date
 
         :param str stock_code: stock code
@@ -236,8 +240,8 @@ class CybosPlus(object):
         """
         0 - date
         2 - start
-        3 - max
-        4 - min
+        3 - high
+        4 - low
         5 - close
         6 - relative to yesterday
         8 - trade_volume
@@ -250,54 +254,23 @@ class CybosPlus(object):
         scObject.SetInputValue(9, ord('1'))  # adjusted
         scObject.BlockRequest()
 
+        num_of_data_fields = scObject.GetHeaderValue(1)
+        field_name_list = scObject.GetHeaderValue(2)
         how_many_data = scObject.GetHeaderValue(3)
         current_price = scObject.GetHeaderValue(7)
         current_status = scObject.GetHeaderValue(17)
 
         result = dict()
+        data = []
         for i in xrange(how_many_data):
-            date = scObject.GetDataValue(0, i)
-            close = scObject.GetDataValue(1, i)
-            trade_volume = scObject.GetDataValue(2, i)
-            share_available = scObject.GetDataValue(3, i)
-            market_volume = scObject.GetDataValue(4, i)
             temp = dict()
-            temp['date'] = date
-            temp['close'] = close
-            temp['trade_volume'] = trade_volume
-            temp['share_available'] = share_available
-            temp['market_volume'] = market_volume
-            result[i] = temp
+            for field_idx, field_name in zip(xrange(num_of_data_fields), field_name_list):
+                val = scObject.GetDataValue(field_idx, i)
+                temp[field_name] = val
+            data.append(temp)
+        result['data'] = data
         result['current_price'] = current_price
-        result['current_status'] = chr(current_status)
-        """
-        Current Status:
-        '0' - 정상
-        '1' - 투자위험
-        '2' - 관리
-        '3' - 거래정지
-        '4' - 불성실공시
-        '5' - 불성실공시&관리
-        '6' - 불성실공시&거래정지
-        '7' - 불성실공시&투자위험
-        '8' - 투자위험&거래정지
-        '9' - 관리&거래정지
-        'A' - 불성실공시&관리&거래정지
-        'B' - 불성실공시&투자위험&거래정지
-        'C' - 투자위험예고
-        'D' - 투자주의
-        'E' - 투자경고
-        'F' - 불성실공시&투자위험예고
-        'G' - 불성실공시&투자주의
-        'H' - 불성실공시&투자경고
-        'I' - 투자위험예고&거래정지
-        'J' - 투자주의&거래정지
-        'K' - 투자경고&거래정지
-        'L' - 불성실공시&투자위험예고&거래정지
-        'M' - 불성실공시&투자주의&거래정지
-        'N' - 불성실공시&투자경고&거래정지
-        'Z' - ETF종목
-        """
+        result['current_status'] = order_status_dict[chr(current_status)]
         return result
 
     @staticmethod
@@ -313,7 +286,7 @@ class CybosPlus(object):
         return object.GetHeaderValue(10)
 
     @staticmethod
-    def get_10_latest_quotes(stockcode):
+    def get_quote_by_count(stockcode, count=10):
         ''' Returns 10 latest quotes given the stock code.
 
         :param str stockcode: stock code
@@ -321,7 +294,8 @@ class CybosPlus(object):
         '''
         CybosPlus.StockChart.SetInputValue(0, stockcode)
         CybosPlus.StockChart.SetInputValue(1, ord('2'))  # 1: by date, 2: by number
-        CybosPlus.StockChart.SetInputValue(4, 10)  # # of Data to Request
+
+        CybosPlus.StockChart.SetInputValue(4, count)  # # of Data to Request
         CybosPlus.StockChart.SetInputValue(5, (0, 5, 8, 12, 13, 25))
         # Request Data, 0: date, 1, hhmm, 2: open, 3: high, 4:low, 5: close, 8: volume
         # 12: 상 장 주 식 수, 13: 시가 총액, 25: 주 식 회 전 율
@@ -343,7 +317,7 @@ class CybosPlus(object):
                 temp[field_name] = val
             data.append(temp)
         result['data'] = data
-        result['current_status'] = current_status
+        result['current_status'] = order_status_dict[current_status]
         result['stock_name'] = CybosPlus.get_stock_name(stockcode)
         return result
 
@@ -381,6 +355,20 @@ class CybosPlus(object):
         order_code = CybosPlus.CpTradeCashOrder.GetHeaderValue(8)
 
         return order_type, order_code
+
+    @staticmethod
+    def change_price_order(AccountNumber, OrderNumber, StockCode, NewPrice, Amount=0):
+        """
+        TODO: Implement to change a price of the order.
+
+        :param AccountNumber:
+        :param OrderNumber:
+        :param StockCode:
+        :param NewPrice:
+        :param Amount:
+        :return:
+        """
+        pass
 
     @staticmethod
     def cancel_order(AccountNumber, OrderNumber, StockCode, Amount=0):
@@ -441,11 +429,15 @@ class CybosPlus(object):
         return CybosPlus.CpCodeMgr.GetMarketEndTime()
 
     @staticmethod
-    def get_many_current_complex_info(stock_list):
+    def get_many_info(stock_list):
+        """
+        여러 주식에 대한 정보를 입력 받음
+        :param stock_list (list):
+        :return 정보들:
+        """
         object = CybosPlus.MarketEye
-        request_fields = (0, 4, 10, 17, 20, 22, 23)
-        field_names = ['code', 'current', 'trade_volume',
-                       'name', 'market_shares', 'y_trade_volume', 'y_close']
+        request_fields = (0, 1, 4, 10, 12, 17, 20, 22, 23, 24, 25, 63, 64, 67, 70,
+                          83)  # http://cybosplus.github.io/cpsysdib_rtf_1_/marketeye.htm
 
         object.SetInputValue(0, request_fields)
         object.SetInputValue(1, stock_list)
@@ -458,7 +450,7 @@ class CybosPlus(object):
         result = []
         for i in xrange(how_many_records):
             record = dict()
-            for fieldName, f_idx in zip(field_names, xrange(how_many_fields)):
+            for f_idx, fieldName in zip(xrange(how_many_fields), field_names):
                 data = object.GetDataValue(f_idx, i)
                 record[fieldName] = data
             result.append(record)
@@ -469,12 +461,4 @@ class CybosPlus(object):
 if __name__ == "__main__":
     CybosPlus.initialize(password="0302", delay=0)
     print "Connected: {}".format(CybosPlus.is_connected())
-    print "Limit Request remain: {}".format(CybosPlus.get_limit_remain_time())
-    print "Request Order remain: {}".format(CybosPlus.get_limit_remain_count(0))
-    print "Request Quote remain: {}".format(CybosPlus.get_limit_remain_count(1))
-    print "-------------------------"
     account_no = CybosPlus.get_account_number()[0]
-    portfolio = CybosPlus.get_account_portfolio(account_no)
-    account_balance = CybosPlus.get_account_balance(account_no)
-    print "account balance: {}".format(account_balance)
-    pprint(portfolio)
