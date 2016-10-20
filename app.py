@@ -32,5 +32,10 @@ app.register_blueprint(info_blueprint, url_prefix="/info")
 app.register_blueprint(portfolio_blueprint, url_prefix="/portfolio")
 
 if __name__ == "__main__":
-    CybosPlus.initialize(password="0302")
-    app.run(host="0.0.0.0", port=80)
+    from config import DEBUG
+
+    if DEBUG:
+        app.run(host="0.0.0.0", port=80, debug=DEBUG)
+    else:
+        CybosPlus.initialize(password="0302")
+        app.run(host="0.0.0.0", port=80)

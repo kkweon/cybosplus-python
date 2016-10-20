@@ -5,7 +5,8 @@ import time
 import pywinauto
 from win32com.client import Dispatch, DispatchWithEvents
 
-from enum_list import order_status_dict
+from API.enum_list import order_type_dict
+from enum_list import order_status_dict, order_price_type_dict
 
 
 def auto_enter_password(pwd, delay):
@@ -322,21 +323,36 @@ class CybosPlus(object):
         return result
 
     @staticmethod
-    def buy_order(AccountNumber, StockCode, Amount, Price=None):
+    def buy_order(AccountNumber, StockCode, Amount, Price=0):
         CybosPlus.CpTradeCashOrder.SetInputValue(0, "2")  # 1: Sell, 2: Buy
         CybosPlus.CpTradeCashOrder.SetInputValue(1, AccountNumber)
         CybosPlus.CpTradeCashOrder.SetInputValue(3, StockCode)
         CybosPlus.CpTradeCashOrder.SetInputValue(4, Amount)  # Amount of shares
-        if Price is None:
+        if Price == 0:
             CybosPlus.CpTradeCashOrder.SetInputValue(8, "03")  # Market Price
         else:
             CybosPlus.CpTradeCashOrder.SetInputValue(5, Price)
         CybosPlus.CpTradeCashOrder.BlockRequest()
 
-        order_type = CybosPlus.CpTradeCashOrder.GetHeaderValue(0)
-        order_code = CybosPlus.CpTradeCashOrder.GetHeaderValue(8)
+        order_type = order_type_dict(CybosPlus.CpTradeCashOrder.GetHeaderValue(0))
+        stock_code = CybosPlus.CpTradeCashOrder.GetHeaderValue(3)
+        order_amount = CybosPlus.CpTradeCashOrder.GetHeaderValue(4)
+        order_price = CybosPlus.CpTradeCashOrder.GetHeaderValue(5)
+        order_id = CybosPlus.CpTradeCashOrder.GetHeaderValue(8)
+        stock_name = CybosPlus.CpTradeCashOrder.GetHeaderValue(10)
+        order_price_type = order_price_type_dict[CybosPlus.CpTradeCashOrder.GetHeaderValue(13)]
 
-        return order_type, order_code
+        result = {
+            "order_type": order_type,  # buy / sell,
+            "stock_code": stock_code,
+            "order_amount": order_amount,
+            "order_price": order_price,
+            "order_id": order_id,  # 주문번호
+            "stock_name": stock_name,
+            "order_price_type": order_price_type  # 보통, 임의, 시장가,
+        }
+
+        return result
 
     @staticmethod
     def sell_order(AccountNumber, StockCode, Amount, Price=None):
@@ -351,13 +367,28 @@ class CybosPlus(object):
 
         CybosPlus.CpTradeCashOrder.BlockRequest()
 
-        order_type = CybosPlus.CpTradeCashOrder.GetHeaderValue(0)
-        order_code = CybosPlus.CpTradeCashOrder.GetHeaderValue(8)
+        order_type = order_type_dict(CybosPlus.CpTradeCashOrder.GetHeaderValue(0))
+        stock_code = CybosPlus.CpTradeCashOrder.GetHeaderValue(3)
+        order_amount = CybosPlus.CpTradeCashOrder.GetHeaderValue(4)
+        order_price = CybosPlus.CpTradeCashOrder.GetHeaderValue(5)
+        order_id = CybosPlus.CpTradeCashOrder.GetHeaderValue(8)
+        stock_name = CybosPlus.CpTradeCashOrder.GetHeaderValue(10)
+        order_price_type = order_price_type_dict[CybosPlus.CpTradeCashOrder.GetHeaderValue(13)]
 
-        return order_type, order_code
+        result = {
+            "order_type": order_type,  # buy / sell,
+            "stock_code": stock_code,
+            "order_amount": order_amount,
+            "order_price": order_price,
+            "order_id": order_id,  # 주문번호
+            "stock_name": stock_name,
+            "order_price_type": order_price_type  # 보통, 임의, 시장가,
+        }
+
+        return result
 
     @staticmethod
-    def change_price_order(AccountNumber, OrderNumber, StockCode, NewPrice, Amount=0):
+    def change_order_price(AccountNumber, OrderNumber, StockCode, NewPrice, Amount=0):
         """
         TODO: Implement to change a price of the order.
 

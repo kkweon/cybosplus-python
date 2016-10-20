@@ -1,6 +1,6 @@
 import unittest
 
-from ..main import CybosPlus
+from API.main import CybosPlus
 
 
 class TestCase(unittest.TestCase):
