@@ -281,8 +281,20 @@ class CybosPlus(object):
         :param AccountNumber:
         :return:
         """
+        # select stock sub-account
+        accFlag = CybosPlus.CpTdUtil.GoodsList(AccountNumber, 1)
+
+        # will print acc flag: 123456789 ('01',)
+        # accFlag is your stock trading sub-account you see in you HTS/MTS.
+        # print("acc flag:", AccountNumber, accFlag)
+
         object = CybosPlus.CpTradeAccBalanceBuy
         object.SetInputValue(0, AccountNumber)
+
+        # You need the 2nd parameter:
+        # http://money2.daishin.com/e5/mboard/ptype_basic/Basic_018/DW_Basic_Read_Page.aspx?boardseq=60&seq=19591&ismy=0&page=1&searchString=&p=8827&v=8636&m=9508
+        # https://money2.daishin.com/e5/mboard/ptype_basic/plusPDS/DW_Basic_Read.aspx?boardseq=299&seq=46&page=2&searchString=&prd=&lang=7&p=8831&v=8638&m=9508
+        object.SetInputValue(1, accFlag[0])
         object.BlockRequest()
         return object.GetHeaderValue(10)
 
