@@ -12,10 +12,6 @@ from models.info.views import info_blueprint
 from models.portfolios.views import portfolio_blueprint
 from models.stocks.views import stock_blueprint
 
-# UTF-8 Encoding
-# 없 으 면 에 러 남
-reload(sys)
-sys.setdefaultencoding('utf-8')
 
 app = Flask(__name__)
 api = Api(app)  # Restful

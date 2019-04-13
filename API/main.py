@@ -6,7 +6,7 @@ import pywinauto
 from win32com.client import Dispatch, DispatchWithEvents
 
 from API.enum_list import order_type_dict
-from enum_list import order_status_dict, order_price_type_dict
+from .enum_list import order_status_dict, order_price_type_dict
 
 
 def auto_enter_password(pwd, delay):
@@ -26,7 +26,7 @@ def auto_enter_password(pwd, delay):
 
 class EventDisconnectHandler:
     def OnDisConnect(self):
-        print "Disconnecting.."
+        print("Disconnecting..")
 
 
 class CybosPlus(object):
@@ -184,7 +184,7 @@ class CybosPlus(object):
         if no_data == 0:
             return -1
         else:
-            for i in xrange(no_data):
+            for i in range(no_data):
                 stock_name = CybosPlus.CpTradeAccPortfolio.GetDataValue(0, i)  # stock name
                 # pay_amount = CybosPlus.CpTradeAccPorfolio.GetDataValue(3, i) #gyeoljaejangosooryang
                 trade_amount = CybosPlus.CpTradeAccPortfolio.GetDataValue(7, i)  # chaegeoljangosooryang
@@ -263,9 +263,9 @@ class CybosPlus(object):
 
         result = dict()
         data = []
-        for i in xrange(how_many_data):
+        for i in range(how_many_data):
             temp = dict()
-            for field_idx, field_name in zip(xrange(num_of_data_fields), field_name_list):
+            for field_idx, field_name in zip(range(num_of_data_fields), field_name_list):
                 val = scObject.GetDataValue(field_idx, i)
                 temp[field_name] = val
             data.append(temp)
@@ -311,9 +311,9 @@ class CybosPlus(object):
 
         result = dict()
         data = []
-        for i in xrange(num_data):
+        for i in range(num_data):
             temp = dict()
-            for field_name, field in zip(field_names, xrange(num_fields)):
+            for field_name, field in zip(field_names, range(num_fields)):
                 val = CybosPlus.StockChart.GetDataValue(field, i)
                 temp[field_name] = val
             data.append(temp)
@@ -427,7 +427,7 @@ class CybosPlus(object):
         num_data = CybosPlus.CpTradeOrderStatus.GetHeaderValue(6)
         result = []
 
-        for i in xrange(num_data):
+        for i in range(num_data):
             order_no = CybosPlus.CpTradeOrderStatus.GetDataValue(1, i)  # order#
             stock_code = CybosPlus.CpTradeOrderStatus.GetDataValue(3, i)
             stock_name = CybosPlus.CpTradeOrderStatus.GetDataValue(4, i)
@@ -479,9 +479,9 @@ class CybosPlus(object):
         how_many_records = object.GetHeaderValue(2)
 
         result = []
-        for i in xrange(how_many_records):
+        for i in range(how_many_records):
             record = dict()
-            for f_idx, fieldName in zip(xrange(how_many_fields), field_names):
+            for f_idx, fieldName in zip(range(how_many_fields), field_names):
                 data = object.GetDataValue(f_idx, i)
                 record[fieldName] = data
             result.append(record)
@@ -491,5 +491,5 @@ class CybosPlus(object):
 
 if __name__ == "__main__":
     CybosPlus.initialize(password="0302", delay=0)
-    print "Connected: {}".format(CybosPlus.is_connected())
+    print("Connected: {}".format(CybosPlus.is_connected()))
     account_no = CybosPlus.get_account_number()[0]
