@@ -54,7 +54,7 @@ class BuyOrder(Resource):
         """
         account_number = CybosPlus.get_account_number()[0]
         result = list()
-        print data
+        print(data)
         for order_data in data:
             if order_data['order_type'] == 2:
                 one_result = CybosPlus.buy_order(account_number, order_data['stock_code'], order_data['amount'],
