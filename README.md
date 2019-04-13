@@ -2,7 +2,7 @@
 CybosPlus Python Wrapper (+ flask API server)
 
 ## Requirements
-0. python2 (*32bit*)
+0. python3 (*32bit*) (tested with Conda with Python 3.7.1)
 1. flask
 2. flask-restful
 3. flask-cors
@@ -10,9 +10,10 @@ CybosPlus Python Wrapper (+ flask API server)
 5. pywinauto
 
 ## Configuration (config.py)
-1. DEBUG = False
+1. config.example.py를 복사해서 config.py를 만든다
+2. DEBUG = False
     True => Cybos 시작안함.
-2. CYBOS_TRADING_PASSWORD = "0302"
+3. CYBOS_TRADING_PASSWORD = "0302"
     Cybos 거래용 비밀번호 4자리
     
 ## How to Run
